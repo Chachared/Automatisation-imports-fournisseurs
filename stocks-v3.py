@@ -1,6 +1,7 @@
 import csv
 from openpyxl import load_workbook
 
+#########################convertir et fusionner les fichiers d'entrée (input, complément d'infos de tecdoc...)########################################
 # convertir le fichier input depuis excel vers csv
 valeo_file = load_workbook(filename = 'Input/valeo.xlsx')
 sheet_valeo = valeo_file.active
@@ -57,3 +58,55 @@ with open('fusion-input-tecdoc.csv', 'w', newline='') as fusion_csv:
     writer = csv.DictWriter(fusion_csv, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(merged_data)
+
+#####################écrire les datas collectées en entrée vers la sortie (fichier output MIP ebay)############################################
+
+# convertir le fichier MIP en csv
+MIP_file = load_workbook(filename = 'MIP.xlsx')
+sheet_MIP = MIP_file.active
+csv_data_MIP = []
+for value in sheet_MIP.iter_rows(values_only=True):
+    csv_data_MIP.append(list(value))
+with open('MIP.csv', 'w') as MIP_csv:
+    writer = csv.writer(MIP_csv, delimiter=',')
+    for line in csv_data_MIP:
+        writer.writerow(line)
+
+# lire les données dans le csv fusion
+fusion_data = []
+with open('fusion-input-tecdoc.csv', 'r') as fusion_csv:
+    reader = csv.DictReader(fusion_csv)
+    for row in reader:
+        fusion_data.append(row)
+
+# Lire les noms de champs du fichier MIP
+with open('MIP.csv', 'r') as MIP_csv:
+    reader = csv.DictReader(MIP_csv)
+    mip_fieldnames = reader.fieldnames
+
+# Mapper les champs correspondants entre fusion et MIP
+mapping = {
+    'MPN': 'MPN',
+    'List Price': '*StartPrice',
+    'Total Ship To Home Quantity': '*Quantity',
+    'Shipping policy': '*ShippingProfileName',
+    'Return Policy': '*ReturnProfileName',
+    'Payment Policy': '*PaymentProfileName'
+}
+
+# Écrire les datas mappées dans une nouvelle liste
+mapped_data = []
+for row in fusion_data:
+    mapped_row = {}
+    for mip_field in mip_fieldnames:
+        if mip_field in mapping:
+            mapped_row[mip_field] = row[mapping[mip_field]]
+        else:
+            mapped_row[mip_field] = ''  # Champ vide si aucune donnée correspondante
+    mapped_data.append(mapped_row)
+
+# Écrire les données mappées dans le fichier MIP
+with open('MIP.csv', 'w', newline='') as mip_csv:
+    writer = csv.DictWriter(mip_csv, fieldnames=mip_fieldnames)
+    writer.writeheader()
+    writer.writerows(mapped_data)
