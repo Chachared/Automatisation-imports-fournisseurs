@@ -101,9 +101,59 @@ for row in fusion_data:
     for mip_field in mip_fieldnames:
         if mip_field in mapping:
             mapped_row[mip_field] = row[mapping[mip_field]]
+        # construire la valeur du champ SKU en concaténant les valeurs des champs MPN et Brand
+        elif mip_field == 'SKU':
+            mapped_row[mip_field] = row['MPN'] + '_' + row['Brand']
+        # remplir les champs Ktype en séparant les Ktypes renseignés dans fusion
+        elif mip_field.startswith('Compatible Product'):
+            compatible_product_number = mip_field.split()[-1]  # Récupérer le numéro de "Compatible Product"
+            ktype_values = row['Ktype'].split(',')  # Diviser les valeurs du champ "Ktype" par ";"
+            if int(compatible_product_number) <= len(ktype_values):
+                mapped_row[mip_field] = 'Ktype=' + ktype_values[int(compatible_product_number) - 1]
+            else:
+                mapped_row[mip_field] = ''  # Champ vide si l'index dépasse le nombre de valeurs disponibles
+        # remplir les champs d'attributs avec le header du champ dans le champ Attribute Name, et la valeur du champ dans Attribute Value
+        elif mip_field == 'Attribute Name 1':
+            mapped_row[mip_field] = 'Brand'
+        elif mip_field == 'Attribute Value 1':
+            mapped_row[mip_field] = row['Brand']
+        elif mip_field == 'Attribute Name 2':
+            mapped_row[mip_field] = 'Type'
+        elif mip_field == 'Attribute Value 2':
+            mapped_row[mip_field] = row['Type']
+        elif mip_field == 'Attribute Name 3':
+            mapped_row[mip_field] = 'Nombre de dents'
+        elif mip_field == 'Attribute Value 3':
+            mapped_row[mip_field] = row['Nombre de dents']
+        elif mip_field == 'Attribute Name 4':
+            mapped_row[mip_field] = 'Force d\'éjection (N)'
+        elif mip_field == 'Attribute Value 4':
+            mapped_row[mip_field] = row['Force d\'éjection (N)']
+        elif mip_field == 'Attribute Name 5':
+            mapped_row[mip_field] = 'Poids'
+        elif mip_field == 'Attribute Value 5':
+            mapped_row[mip_field] = row['Poids']
+        elif mip_field == 'Attribute Name 6':
+            mapped_row[mip_field] = 'Fixation de colonne de direction'
+        elif mip_field == 'Attribute Value 6':
+            mapped_row[mip_field] = row['Fixation de colonne de direction']
+        elif mip_field == 'Attribute Name 7':
+            mapped_row[mip_field] = 'Diamètre du disque'
+        elif mip_field == 'Attribute Value 7':
+            mapped_row[mip_field] = row['Diamètre du disque']
+        elif mip_field == 'Attribute Name 8':
+            mapped_row[mip_field] = 'Info complementaire 1'
+        elif mip_field == 'Attribute Value 8':
+            mapped_row[mip_field] = row['Info complementaire 1']
+        # écrire les OE en remplaçant les virgules par des |
+        elif mip_field == 'Attribute Name 9':
+            mapped_row[mip_field] = 'OE'
+        elif mip_field == 'Attribute Value 9':
+            mapped_row[mip_field] = row['OE'].replace(',', ' | ') if 'OE' in row else ''
         else:
             mapped_row[mip_field] = ''  # Champ vide si aucune donnée correspondante
     mapped_data.append(mapped_row)
+
 
 # Écrire les données mappées dans le fichier MIP
 with open('MIP.csv', 'w', newline='') as mip_csv:
