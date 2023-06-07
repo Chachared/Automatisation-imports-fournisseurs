@@ -4,21 +4,21 @@ from openpyxl import load_workbook
 
 # Dossier d'entrée et de sortie
 input_folder = 'input'
-converted_input_folder = 'converted_input_files'
-converted_tecdoc_folder = 'converted_tecdoc_file'
+input_converted_folder = 'converted_input_files'
+tecdoc_converted_folder = 'converted_tecdoc_file'
 tecdoc_folder = 'ExempleTD'
 tecdoc_file = 'TecDoc.xlsx'
 mip_folder = 'MIP'
-converted_mip_folder = 'MIP_converted'
+mip_converted_folder = 'MIP_converted'
 mip_file = 'MIP.xlsx'
 fusion_folder = 'fusion'
 mip_done_folder = 'MIP_done'
 mip_converted_file = 'mip.csv'
 
 # Créer les dossiers de sortie s'ils n'existent pas
-os.makedirs(converted_input_folder, exist_ok=True)
-os.makedirs(converted_tecdoc_folder, exist_ok=True)
-os.makedirs(converted_mip_folder, exist_ok=True)
+os.makedirs(input_converted_folder, exist_ok=True)
+os.makedirs(tecdoc_converted_folder, exist_ok=True)
+os.makedirs(mip_converted_folder, exist_ok=True)
 os.makedirs(fusion_folder, exist_ok=True)
 os.makedirs(mip_done_folder, exist_ok=True)
 
@@ -27,7 +27,7 @@ for input_file in os.listdir(input_folder):
     if input_file.endswith('.xlsx') and input_file != tecdoc_file:
         input_path = os.path.join(input_folder, input_file)
         converted_file = os.path.splitext(input_file)[0] + '.csv'
-        converted_path = os.path.join(converted_input_folder, converted_file)
+        converted_path = os.path.join(input_converted_folder, converted_file)
 
         # Charger le fichier xlsx
         wb = load_workbook(input_path)
@@ -44,7 +44,7 @@ for input_file in os.listdir(input_folder):
 # Conversion du fichier TecDoc en CSV
 tecdoc_path = os.path.join(tecdoc_folder, tecdoc_file)
 converted_tecdoc_file = 'TecDoc.csv'
-converted_tecdoc_path = os.path.join(converted_tecdoc_folder, converted_tecdoc_file)
+converted_tecdoc_path = os.path.join(tecdoc_converted_folder, converted_tecdoc_file)
 
 # Charger le fichier xlsx TecDoc
 tecdoc_wb = load_workbook(tecdoc_path)
@@ -65,7 +65,7 @@ print(f"Le fichier '{tecdoc_file}' a été converti en CSV : {converted_tecdoc_f
 # Conversion du fichier MIP en CSV
 mip_path = os.path.join(mip_folder, mip_file)
 converted_mip_file = 'mip.csv'
-converted_mip_path = os.path.join(converted_mip_folder, converted_mip_file)
+converted_mip_path = os.path.join(mip_converted_folder, converted_mip_file)
 
 # Charger le fichier xlsx MIP
 mip_wb = load_workbook(mip_path)
@@ -91,10 +91,10 @@ input_keys = {
 }
 
 # Fusion des fichiers d'entrée avec TecDoc.csv
-tecdoc_csv_path = os.path.join(converted_tecdoc_folder, converted_tecdoc_file)
+tecdoc_csv_path = os.path.join(tecdoc_converted_folder, converted_tecdoc_file)
 
 for input_file, input_key in input_keys.items():
-    input_path = os.path.join(converted_input_folder, input_file)
+    input_path = os.path.join(input_converted_folder, input_file)
     fusion_file = f'fusion-{input_file}'
 
     with open(input_path, 'r', newline='', encoding='utf-8') as input_csv, \
@@ -141,7 +141,24 @@ for input_file, input_key in input_keys.items():
 print("La fusion des fichiers a été réalisée avec succès.")
 
 # écrire la data dans les fichiers MIP-{fusion file}.csv
-def process_data(fusion_folder, mip_folder, field_mapping):
+mip_converted_path = os.path.join(mip_converted_folder, mip_converted_file)
+
+# Écrire les en-têtes de MIP.csv dans les fichiers MIP fusionnés
+def write_mip_headers():
+    mip_fieldnames = []
+    with open(mip_converted_path, 'r') as mip_csv:
+        mip_reader = csv.DictReader(mip_csv)
+        mip_fieldnames = mip_reader.fieldnames
+
+    mip_files = [f for f in os.listdir(mip_done_folder) if f.startswith("MIP-")]
+    for mip_file in mip_files:
+        mip_path = os.path.join(mip_done_folder, mip_file)
+        with open(mip_path, 'w', newline='') as mip_csv:
+            mip_writer = csv.DictWriter(mip_csv, fieldnames=mip_fieldnames)
+            mip_writer.writeheader()
+
+# Écrire la data dans les fichiers MIP fusionnés
+def process_data(fusion_folder, field_mapping):
     fusion_files = os.listdir(fusion_folder)
 
     for fusion_file in fusion_files:
@@ -150,40 +167,36 @@ def process_data(fusion_folder, mip_folder, field_mapping):
 
         fusion_path = os.path.join(fusion_folder, fusion_file)
         mip_file = fusion_file.replace("fusion-", "MIP-fusion-")
-        mip_path = os.path.join(mip_folder, mip_file)
+        mip_path = os.path.join(mip_done_folder, mip_file)
 
         if not os.path.isfile(fusion_path):
             continue
 
         mapping = field_mapping.get(fusion_file, {})
-        mip_fieldnames = list(mapping.values())
+
+        mip_fieldnames = []
+        with open(mip_converted_path, 'r') as mip_csv:
+            mip_reader = csv.DictReader(mip_csv)
+            mip_fieldnames = mip_reader.fieldnames
 
         with open(fusion_path, 'r') as fusion_csv, open(mip_path, 'w', newline='') as mip_csv:
             fusion_reader = csv.DictReader(fusion_csv)
+
             mip_writer = csv.DictWriter(mip_csv, fieldnames=mip_fieldnames)
             mip_writer.writeheader()
 
             for row in fusion_reader:
                 mip_row = {}
 
-                # Remplir les champs du mapping s'il y a une correspondance
                 for fusion_field, mip_field in mapping.items():
                     if fusion_field in row:
                         mip_row[mip_field] = row[fusion_field]
                     else:
                         mip_row[mip_field] = ''
 
-                # Ajouter les champs restants de MIP.csv
-                for mip_field in mip_fieldnames:
-                    if mip_field not in mip_row:
-                        mip_row[mip_field] = ''
-
                 mip_writer.writerow(mip_row)
 
-# Dossier contenant les fichiers de fusion
-fusion_folder = 'fusion'
-# Dossier où écrire les fichiers MIP fusion correspondants
-mip_folder = 'MIP_done'
+
 
 # Dictionnaire de mapping des champs entre les fichiers de fusion et MIP
 field_mapping = {
@@ -199,14 +212,22 @@ field_mapping = {
         'OE': 'Attribute Value 9',
     },
     'fusion-test.csv': {
-        'code de fuuuuusion': 'MPN',
+        'Marque': 'Attribute Value 1',
+        'Type': 'Attribute Value 2',
+        'Nombre de dents': 'Attribute Value 3',
+        'Force d\'éjection (N)': 'Attribute Value 4',
+        'Poids': 'Attribute Value 5',
+        'Fixation de colonne de direction': 'Attribute Value 6',
+        'Diamètre du disque': 'Attribute Value 7',
+        'Info complementaire 1': 'Attribute Value 8',
+        'OE': 'Attribute Value 9',
         # Ajoutez d'autres mappages de champs ici
     },
     # Ajoutez d'autres mappages de champs pour les autres fichiers de fusion
 }
 
 # Parcourir les fichiers de fusion et les traiter en masse
-process_data(fusion_folder, mip_done_folder, field_mapping)
+process_data(fusion_folder, field_mapping)
 
 print("L'écriture des fichiers MIP par fournisseur est terminée")
 
