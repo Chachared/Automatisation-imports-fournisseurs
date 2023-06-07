@@ -12,13 +12,15 @@ mip_folder = 'MIP'
 converted_mip_folder = 'MIP_converted'
 mip_file = 'MIP.xlsx'
 fusion_folder = 'fusion'
-
+mip_done_folder = 'MIP_done'
+mip_converted_file = 'mip.csv'
 
 # Créer les dossiers de sortie s'ils n'existent pas
 os.makedirs(converted_input_folder, exist_ok=True)
 os.makedirs(converted_tecdoc_folder, exist_ok=True)
 os.makedirs(converted_mip_folder, exist_ok=True)
 os.makedirs(fusion_folder, exist_ok=True)
+os.makedirs(mip_done_folder, exist_ok=True)
 
 # Conversion des fichiers d'input en CSV
 for input_file in os.listdir(input_folder):
@@ -137,3 +139,76 @@ for input_file, input_key in input_keys.items():
     print(f"La fusion des fichiers TecDoc.csv et {input_file} a été réalisée : {fusion_file}")
 
 print("La fusion des fichiers a été réalisée avec succès.")
+
+# écrire la data dans les fichiers MIP-{fusion file}.csv
+def process_data(fusion_folder, mip_folder, field_mapping):
+    fusion_files = os.listdir(fusion_folder)
+
+    for fusion_file in fusion_files:
+        if not fusion_file.endswith('.csv'):
+            continue
+
+        fusion_path = os.path.join(fusion_folder, fusion_file)
+        mip_file = fusion_file.replace("fusion-", "MIP-fusion-")
+        mip_path = os.path.join(mip_folder, mip_file)
+
+        if not os.path.isfile(fusion_path):
+            continue
+
+        mapping = field_mapping.get(fusion_file, {})
+        mip_fieldnames = list(mapping.values())
+
+        with open(fusion_path, 'r') as fusion_csv, open(mip_path, 'w', newline='') as mip_csv:
+            fusion_reader = csv.DictReader(fusion_csv)
+            mip_writer = csv.DictWriter(mip_csv, fieldnames=mip_fieldnames)
+            mip_writer.writeheader()
+
+            for row in fusion_reader:
+                mip_row = {}
+
+                # Remplir les champs du mapping s'il y a une correspondance
+                for fusion_field, mip_field in mapping.items():
+                    if fusion_field in row:
+                        mip_row[mip_field] = row[fusion_field]
+                    else:
+                        mip_row[mip_field] = ''
+
+                # Ajouter les champs restants de MIP.csv
+                for mip_field in mip_fieldnames:
+                    if mip_field not in mip_row:
+                        mip_row[mip_field] = ''
+
+                mip_writer.writerow(mip_row)
+
+# Dossier contenant les fichiers de fusion
+fusion_folder = 'fusion'
+# Dossier où écrire les fichiers MIP fusion correspondants
+mip_folder = 'MIP_done'
+
+# Dictionnaire de mapping des champs entre les fichiers de fusion et MIP
+field_mapping = {
+    'fusion-valeo.csv': {
+        'Marque': 'Attribute Value 1',
+        'Type': 'Attribute Value 2',
+        'Nombre de dents': 'Attribute Value 3',
+        'Force d\'éjection (N)': 'Attribute Value 4',
+        'Poids': 'Attribute Value 5',
+        'Fixation de colonne de direction': 'Attribute Value 6',
+        'Diamètre du disque': 'Attribute Value 7',
+        'Info complementaire 1': 'Attribute Value 8',
+        'OE': 'Attribute Value 9',
+    },
+    'fusion-test.csv': {
+        'code de fuuuuusion': 'MPN',
+        # Ajoutez d'autres mappages de champs ici
+    },
+    # Ajoutez d'autres mappages de champs pour les autres fichiers de fusion
+}
+
+# Parcourir les fichiers de fusion et les traiter en masse
+process_data(fusion_folder, mip_done_folder, field_mapping)
+
+print("L'écriture des fichiers MIP par fournisseur est terminée")
+
+
+##n'écrit pas tous les champs MIP dans les fichiers MIP-fusion => à résoudre
