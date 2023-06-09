@@ -1,6 +1,7 @@
 import os
 import csv
 from openpyxl import load_workbook
+import re
 
 # Dossier d'entrée et de sortie
 input_folder = 'input'
@@ -185,12 +186,32 @@ def process_data(fusion_folder, field_mapping):
             mip_writer = csv.DictWriter(mip_csv, fieldnames=mip_fieldnames)
             mip_writer.writeheader()
 
+
             for row in fusion_reader:
                 mip_row = {}
 
+                # Ajouter les données qui seront fixes quels que soient les produits à importer
+                mip_row['Channel ID'] = 'EBAY_FR'  
+                mip_row['Condition'] = 'NEW'
+                mip_row['VAT Percent'] = 20
+                mip_row['Include eBay Product Details'] = False
+
+                # Ajouter les données variant selon les produits
                 for fusion_field, mip_field in mapping.items():
                     if fusion_field in row:
-                        mip_row[mip_field] = row[fusion_field]
+                        # Construction du champ Attribute Value qui contient les OE
+                        if fusion_field == 'OE':
+                            oe = row[fusion_field]
+                            mip_row[mip_field] = ' | '.join(oe.split(','))
+
+                        elif fusion_field == 'Ktype' and fusion_field in row:
+                            ktype_value = row[fusion_field]
+                            ktype_values = re.split(r'[,/| ]', ktype_value)
+                            for i, value in enumerate(ktype_values):
+                                compatible_product_field = mip_field.replace('{number}', str(i + 1))
+                                mip_row[compatible_product_field] = f"Ktype={value.strip()}"
+                        else:
+                            mip_row[mip_field] = row[fusion_field]
                     else:
                         mip_row[mip_field] = ''
 
@@ -198,29 +219,34 @@ def process_data(fusion_folder, field_mapping):
 
 
 
+
 # Dictionnaire de mapping des champs entre les fichiers de fusion et MIP
 field_mapping = {
     'fusion-valeo.csv': {
         'Marque': 'Attribute Value 1',
-        'Type': 'Attribute Value 2',
-        'Nombre de dents': 'Attribute Value 3',
-        'Force d\'éjection (N)': 'Attribute Value 4',
-        'Poids': 'Attribute Value 5',
-        'Fixation de colonne de direction': 'Attribute Value 6',
-        'Diamètre du disque': 'Attribute Value 7',
-        'Info complementaire 1': 'Attribute Value 8',
-        'OE': 'Attribute Value 9',
+        'MPN': 'Attribute Value 2',
+        'Type': 'Attribute Value 3',
+        'Nombre de dents': 'Attribute Value 4',
+        'Force d\'éjection (N)': 'Attribute Value 5',
+        'Poids': 'Attribute Value 6',
+        'Fixation de colonne de direction': 'Attribute Value 7',
+        'Diamètre du disque': 'Attribute Value 8',
+        'Info complementaire 1': 'Attribute Value 9',
+        'OE': 'Attribute Value 10',
+        'Ktype':'Compatible Product {number}'
     },
     'fusion-test.csv': {
         'Marque': 'Attribute Value 1',
-        'Type': 'Attribute Value 2',
-        'Nombre de dents': 'Attribute Value 3',
-        'Force d\'éjection (N)': 'Attribute Value 4',
-        'Poids': 'Attribute Value 5',
-        'Fixation de colonne de direction': 'Attribute Value 6',
-        'Diamètre du disque': 'Attribute Value 7',
-        'Info complementaire 1': 'Attribute Value 8',
-        'OE': 'Attribute Value 9',
+        'MPN': 'Attribute Value 2',
+        'Type': 'Attribute Value 3',
+        'Nombre de dents': 'Attribute Value 4',
+        'Force d\'éjection (N)': 'Attribute Value 5',
+        'Poids': 'Attribute Value 6',
+        'Fixation de colonne de direction': 'Attribute Value 7',
+        'Diamètre du disque': 'Attribute Value 8',
+        'Info complementaire 1': 'Attribute Value 9',
+        'OE': 'Attribute Value 10',
+        'Ktype':'Compatible Product {number}'
         # Ajoutez d'autres mappages de champs ici
     },
     # Ajoutez d'autres mappages de champs pour les autres fichiers de fusion
@@ -232,4 +258,6 @@ process_data(fusion_folder, field_mapping)
 print("L'écriture des fichiers MIP par fournisseur est terminée")
 
 
-##n'écrit pas tous les champs MIP dans les fichiers MIP-fusion => à résoudre
+## matcher les champs
+## écrire les champs complexes (SKU, OE, Ktype)
+## écrire les headers de MIP dans les Attribute
