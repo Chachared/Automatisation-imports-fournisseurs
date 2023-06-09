@@ -190,31 +190,47 @@ def process_data(fusion_folder, field_mapping):
             for row in fusion_reader:
                 mip_row = {}
 
+                # Ajouter les données variant selon les produits
+                for fusion_field, mip_field in mapping.items():
+                    if fusion_field != 'Ktype' and fusion_field != 'OE':
+                        if fusion_field in row:
+                            mip_row[mip_field] = row[fusion_field]
+                            # Récupérer le nom du champ pour Attribute Name
+                            attribute_name_field = mip_field.replace('Value', 'Name')
+                            mip_row[attribute_name_field] = fusion_field
+                        else:
+                            mip_row[mip_field] = ''
+                            attribute_name_field = mip_field.replace('Value', 'Name')
+                            mip_row[attribute_name_field] = ''
+
+                # Traiter le champ OE et le séparer par des '|'
+                if 'OE' in mapping and 'OE' in row:
+                    oe_value = row['OE']
+                    mip_row[attribute_value_field] = ' | '.join(oe_value.split(','))
+                    attribute_name_field = attribute_value_field.replace('Value', 'Name')
+                    mip_row[attribute_name_field] = 'OE'
+
+                unmapped_fields = [field for field in row.keys() if field not in mapping.keys() and field != 'Ktype' and field != 'OE']
+                for i, field in enumerate(unmapped_fields, start=1):
+                    attribute_value_field = f'Attribute Value {i}'
+                    mip_row[attribute_value_field] = row[field]
+                    attribute_name_field = f'Attribute Name {i}'
+                    mip_row[attribute_name_field] = field
+
+                # Mapper les champs Ktype
+                if 'Ktype' in mapping and 'Ktype' in row:
+                    ktype_value = row['Ktype']
+                    ktype_values = re.split(r'[,/| ]', ktype_value)
+                    for i, value in enumerate(ktype_values):
+                        compatible_product_field = mapping['Ktype'].replace('{number}', str(i + 1))
+                        mip_row[compatible_product_field] = f"Ktype={value.strip()}"
+
                 # Ajouter les données qui seront fixes quels que soient les produits à importer
                 mip_row['Channel ID'] = 'EBAY_FR'  
                 mip_row['Condition'] = 'NEW'
                 mip_row['VAT Percent'] = 20
                 mip_row['Include eBay Product Details'] = False
-
-                # Ajouter les données variant selon les produits
-                for fusion_field, mip_field in mapping.items():
-                    if fusion_field in row:
-                        # Construction du champ Attribute Value qui contient les OE
-                        if fusion_field == 'OE':
-                            oe = row[fusion_field]
-                            mip_row[mip_field] = ' | '.join(oe.split(','))
-
-                        elif fusion_field == 'Ktype' and fusion_field in row:
-                            ktype_value = row[fusion_field]
-                            ktype_values = re.split(r'[,/| ]', ktype_value)
-                            for i, value in enumerate(ktype_values):
-                                compatible_product_field = mip_field.replace('{number}', str(i + 1))
-                                mip_row[compatible_product_field] = f"Ktype={value.strip()}"
-                        else:
-                            mip_row[mip_field] = row[fusion_field]
-                    else:
-                        mip_row[mip_field] = ''
-
+                
                 mip_writer.writerow(mip_row)
 
 
@@ -223,29 +239,9 @@ def process_data(fusion_folder, field_mapping):
 # Dictionnaire de mapping des champs entre les fichiers de fusion et MIP
 field_mapping = {
     'fusion-valeo.csv': {
-        'Marque': 'Attribute Value 1',
-        'MPN': 'Attribute Value 2',
-        'Type': 'Attribute Value 3',
-        'Nombre de dents': 'Attribute Value 4',
-        'Force d\'éjection (N)': 'Attribute Value 5',
-        'Poids': 'Attribute Value 6',
-        'Fixation de colonne de direction': 'Attribute Value 7',
-        'Diamètre du disque': 'Attribute Value 8',
-        'Info complementaire 1': 'Attribute Value 9',
-        'OE': 'Attribute Value 10',
         'Ktype':'Compatible Product {number}'
     },
     'fusion-test.csv': {
-        'Marque': 'Attribute Value 1',
-        'MPN': 'Attribute Value 2',
-        'Type': 'Attribute Value 3',
-        'Nombre de dents': 'Attribute Value 4',
-        'Force d\'éjection (N)': 'Attribute Value 5',
-        'Poids': 'Attribute Value 6',
-        'Fixation de colonne de direction': 'Attribute Value 7',
-        'Diamètre du disque': 'Attribute Value 8',
-        'Info complementaire 1': 'Attribute Value 9',
-        'OE': 'Attribute Value 10',
         'Ktype':'Compatible Product {number}'
         # Ajoutez d'autres mappages de champs ici
     },
