@@ -154,17 +154,18 @@ field_mapping = {
         "StoreCategory": "Store Category Name 1",
         "Marque": "Attribute Value 1",
         "Type": "Attribute Value 2",
-        "Ktype": "Compatible Product 1",
         "OE": "Attribute Value 3",
         "MPN": "Attribute Value 4",
         "Nombre de dents": "Attribute Value 5",
         "Force d'éjection (N)": "Attribute Value 6",
         "Poids": "Attribute Value 7",
         "Fixation de colonne de direction": "Attribute Value 8",
-        "Diamètre du disque": "Attribute Value 7",
-        "Info complementaire 1": "Attribute Value 8",
-        "MPN (or OE)": "Attribute Value 7",
-        "Brand": "Attribute Value 8",
+        "Diamètre du disque": "Attribute Value 9",
+        "Info complementaire 1": "Attribute Value 10",
+        "MPN (or OE)": "Attribute Value 11",
+        "Brand": "Attribute Value 12",
+
+        "Ktype": "Compatible Product 1",
         # Ajoutez d'autres mappages de champs ici
     },
     'fusion-test.csv': {
@@ -175,17 +176,17 @@ field_mapping = {
         "StoreCategory": "Store Category Name 1",
         "Marque": "Attribute Value 1",
         "Type": "Attribute Value 2",
-        "Ktype": "Compatible Product 1",
         "OE": "Attribute Value 3",
         "MPN": "Attribute Value 4",
         "Nombre de dents": "Attribute Value 5",
         "Force d'éjection (N)": "Attribute Value 6",
         "Poids": "Attribute Value 7",
         "Fixation de colonne de direction": "Attribute Value 8",
-        "Diamètre du disque": "Attribute Value 7",
-        "Info complementaire 1": "Attribute Value 8",
-        "code de fuuuuusion": "Attribute Value 7",
-        "Brand": "Attribute Value 8",
+        "Diamètre du disque": "Attribute Value 9",
+        "Info complementaire 1": "Attribute Value 10",
+        "code de fuuuuusion": "Attribute Value 11",
+        "Brand": "Attribute Value 12",
+        "Ktype": "Compatible Product 1",
 
         # Ajoutez d'autres mappages de champs ici
     },
@@ -194,7 +195,6 @@ field_mapping = {
 
 # écrire la data dans les fichiers MIP-{fusion file}.csv
 mip_converted_path = os.path.join(mip_converted_folder, mip_converted_file)
-
 
 for fusion_file in os.listdir(fusion_folder):
     if fusion_file.startswith('fusion-') and fusion_file.endswith('.csv'):
@@ -272,8 +272,9 @@ print("Les fichiers de sortie ont été écrits avec succès.")
 
 
 # todo 1: créer le nombre de paire Attribute Name {i} et Attribute Value {i} nécessaires (à ce stade j'en ai plusieurs vides inutiles qui sont créées)
-# todo 1 bis: récupérer les headers des champs mappés Attribute Value, et les écrire dans Attribute Name associé -> Par exemple dans fusion-valeo.csv, j'ai le champ "Marque" et sa valeur est "Valeo", dans MIP-fsuion-valeo.csv, je voudrais que dans le champs Attribute Name  j'ai la valeur "Marque" et dans Attribute VAlue , j'ai la valeur "Valeo"...
-# todo 2: réparer le champ Attribute Value qui 'OE' de fusion -> séparer les valeurs par des '|'
+# todo 1 bis: récupérer les headers des champs mappés Attribute Value, et les écrire dans Attribute Name associé 
+#       -> Par exemple dans fusion-valeo.csv, j'ai le champ "Marque" et sa valeur est "Valeo", dans MIP-fon-valeo.csv, je voudrais que dans le champs Attribute Name  j'ai la valeur "Marque" et dans Attribute Value , j'ai la valeur "Valeo"...
+# todo 2: réparer le champ Attribute Value qui matche 'OE' de fusion -> séparer les valeurs par des '|'
 # todo 3: séparer les numéros du champ "Compatible Product 1" ('Ktype' ou autre des fichiers de fusion, mappés), et écirre chaque Ktype dans un format "Ktype={numéro de Ktype}" et dans un nouveau champ Compatible Product{i}
 # todo 5: remplir les champs complexes qui sont construits avec les valeurs de plusieurs champs des fichiers de fusion. Par exemple le champ 'SKU' dans MIP sera écrit avec {MPN}_{Marque} du fuichier de fusion
 # todo 6 : affiner le mapping, vérifier que je remplis bien tous les champs 'fixes'
