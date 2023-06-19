@@ -214,10 +214,6 @@ for fusion_file in os.listdir(fusion_folder):
             # Créer un dictionnaire de mapping inversé pour les champs du fichier de fusion
             reverse_field_mapping = {v: k for k, v in field_mapping[fusion_file].items()}
 
-            # Récupérer les noms des attributs correspondant aux champs "Attribute Value"
-            attribute_name_fields = []
-            attribute_value_fields = []
-
             # Vérifier si le champ "Attribute Name 1" existe dans le fichier MIP d'origine
             if "Attribute Name 1" not in mip_converted_headers:
                 # Ajouter le champ "Attribute Name 1" aux en-têtes du fichier de fusion MIP
@@ -233,15 +229,13 @@ for fusion_file in os.listdir(fusion_folder):
             # Écrire les en-têtes dans le fichier de fusion MIP
             mip_fusion_headers = mip_converted_headers[:attribute_value1_index + 1]
 
-            # Récupérer les noms des attributs correspondant aux champs "Attribute Value"
-            attribute_name_fields = [f"Attribute Name {i}" for i in range(2, len(reverse_field_mapping) + 2)]
-            attribute_value_fields = [f"Attribute Value {i}" for i in range(2, len(reverse_field_mapping) + 2)]
-
-            # Ajouter les en-têtes "Attribute Name" et "Attribute Value" dans l'ordre
-            for attribute_name_field, attribute_value_field in zip(attribute_name_fields, attribute_value_fields):
+            # Parcourir les colonnes du fichier MIP converti
+            for i in range(1, len(reverse_field_mapping) + 1):
+                attribute_name_field = f"Attribute Name {i}"
+                attribute_value_field = f"Attribute Value {i}"
                 if attribute_value_field in reverse_field_mapping:
-                    attribute_name = reverse_field_mapping[attribute_value_field]  # Récupérer le nom du champ mappé
-                    mip_fusion_headers.append(attribute_name)  # Ajouter le nom du champ mappé dans "Attribute Name {i}"
+                    attribute_name = reverse_field_mapping[attribute_value_field]
+                    mip_fusion_headers.append(attribute_name_field)
                     mip_fusion_headers.append(attribute_value_field)
 
             # Ajouter les en-têtes restants après "Attribute Value 1"
@@ -257,14 +251,22 @@ for fusion_file in os.listdir(fusion_folder):
                 # Parcourir les colonnes du fichier MIP converti
                 for i in range(len(mip_fusion_headers)):
                     header = mip_fusion_headers[i]
-                    if header in reverse_field_mapping:
-                        field_name = reverse_field_mapping[header]
-                        if field_name in fusion_headers:
-                            column_index = fusion_headers.index(field_name)
-                            # Écrire le nom du champ mappé dans "Attribute Name {i}"
-                            mip_fusion_row.append(field_name)
-                            # Écrire la valeur correspondante dans "Attribute Value {i}"
-                            mip_fusion_row.append(fusion_row[column_index])
+                    if header.startswith("Attribute Name"):
+                        attribute_name_index = int(header.split(" ")[-1]) - 1
+                        if attribute_name_index < len(reverse_field_mapping):
+                            attribute_value_field = f"Attribute Value {attribute_name_index + 1}"
+                            if attribute_value_field in reverse_field_mapping:
+                                attribute_name = reverse_field_mapping[attribute_value_field]
+                                mip_fusion_row.append(attribute_name)
+                            else:
+                                mip_fusion_row.append('')
+                        else:
+                            mip_fusion_row.append('')
+                    elif header.startswith("Attribute Value"):
+                        attribute_value_index = int(header.split(" ")[-1]) - 1
+                        if attribute_value_index < len(fusion_row):
+                            attribute_value = fusion_row[attribute_value_index]
+                            mip_fusion_row.append(attribute_value)
                         else:
                             mip_fusion_row.append('')
                     else:
