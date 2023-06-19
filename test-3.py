@@ -214,32 +214,39 @@ for fusion_file in os.listdir(fusion_folder):
             # Créer un dictionnaire de mapping inversé pour les champs du fichier de fusion
             reverse_field_mapping = {v: k for k, v in field_mapping[fusion_file].items()}
 
-            # Vérifier si le champ "Attribute Name 1" existe dans le fichier MIP d'origine
-            if "Attribute Name 1" not in mip_converted_headers:
-                # Ajouter le champ "Attribute Name 1" aux en-têtes du fichier de fusion MIP
-                mip_converted_headers.append("Attribute Name 1")
-                mip_converted_headers.append("Attribute Value 1")
+            # Vérifier si les champs "Attribute Name 1" et "Attribute Value 1" doivent être créés
+            if "Attribute Name 1" not in mip_converted_headers or "Attribute Value 1" not in mip_converted_headers:
+                # Trouver les index des champs "Attribute Name" et "Attribute Value" existants dans le fichier MIP
+                attribute_name_indices = [i for i, header in enumerate(mip_converted_headers) if header.startswith("Attribute Name")]
+                attribute_value_indices = [i for i, header in enumerate(mip_converted_headers) if header.startswith("Attribute Value")]
 
-            # Trouver l'index du champ "Attribute Name 1"
-            attribute_name1_index = mip_converted_headers.index("Attribute Name 1")
+                # Trouver le prochain index disponible pour les champs "Attribute Name" et "Attribute Value"
+                next_attribute_name_index = len(attribute_name_indices) + 1
+                next_attribute_value_index = len(attribute_value_indices) + 1
 
-            # Trouver l'index du champ "Attribute Value 1"
-            attribute_value1_index = mip_converted_headers.index("Attribute Value 1")
+                # Ajouter les champs "Attribute Name 1" et "Attribute Value 1" aux en-têtes du fichier de fusion MIP
+                mip_converted_headers.append(f"Attribute Name {next_attribute_name_index}")
+                mip_converted_headers.append(f"Attribute Value {next_attribute_value_index}")
+
+            # Trouver les index des champs "Attribute Name" et "Attribute Value" existants dans le fichier MIP
+            attribute_name_indices = [i for i, header in enumerate(mip_converted_headers) if header.startswith("Attribute Name")]
+            attribute_value_indices = [i for i, header in enumerate(mip_converted_headers) if header.startswith("Attribute Value")]
 
             # Écrire les en-têtes dans le fichier de fusion MIP
-            mip_fusion_headers = mip_converted_headers[:attribute_value1_index + 1]
+            mip_fusion_headers = mip_converted_headers[:max(attribute_value_indices) + 1]
 
             # Parcourir les colonnes du fichier MIP converti
             for i in range(1, len(reverse_field_mapping) + 1):
                 attribute_name_field = f"Attribute Name {i}"
                 attribute_value_field = f"Attribute Value {i}"
                 if attribute_value_field in reverse_field_mapping:
-                    attribute_name = reverse_field_mapping[attribute_value_field]
-                    mip_fusion_headers.append(attribute_name_field)
-                    mip_fusion_headers.append(attribute_value_field)
+                    attribute_name = reverse_field_mapping[attribute_value_field]  # Récupérer le nom du champ mappé
+                    if attribute_name_field not in mip_fusion_headers:
+                        mip_fusion_headers.append(attribute_name_field)  # Ajouter le champ "Attribute Name" dans les en-têtes
+                        mip_fusion_headers.append(attribute_value_field)  # Ajouter le champ "Attribute Value" dans les en-têtes
 
-            # Ajouter les en-têtes restants après "Attribute Value 1"
-            mip_fusion_headers.extend(mip_converted_headers[attribute_value1_index + 1:])
+            # Ajouter les en-têtes restants après le dernier champ "Attribute Value"
+            mip_fusion_headers.extend(mip_converted_headers[max(attribute_value_indices) + 1:])
 
             mip_fusion_writer.writerow(mip_fusion_headers)
 
