@@ -162,8 +162,6 @@ field_mapping = {
         "Fixation de colonne de direction": "Attribute Value 8",
         "Diamètre du disque": "Attribute Value 9",
         "Info complementaire 1": "Attribute Value 10",
-        "MPN (or OE)": "Attribute Value 11",
-        "Brand": "Attribute Value 12",
 
         "Ktype": "Compatible Product 1",
         # Ajoutez d'autres mappages de champs ici
@@ -184,8 +182,6 @@ field_mapping = {
         "Fixation de colonne de direction": "Attribute Value 8",
         "Diamètre du disque": "Attribute Value 9",
         "Info complementaire 1": "Attribute Value 10",
-        "code de fuuuuusion": "Attribute Value 11",
-        "Brand": "Attribute Value 12",
         "Ktype": "Compatible Product 1",
 
         # Ajoutez d'autres mappages de champs ici
@@ -218,6 +214,10 @@ for fusion_file in os.listdir(fusion_folder):
             # Créer un dictionnaire de mapping inversé pour les champs du fichier de fusion
             reverse_field_mapping = {v: k for k, v in field_mapping[fusion_file].items()}
 
+            # Récupérer les noms des attributs correspondant aux champs "Attribute Value"
+            attribute_name_fields = []
+            attribute_value_fields = []
+
             # Vérifier si le champ "Attribute Name 1" existe dans le fichier MIP d'origine
             if "Attribute Name 1" not in mip_converted_headers:
                 # Ajouter le champ "Attribute Name 1" aux en-têtes du fichier de fusion MIP
@@ -239,8 +239,10 @@ for fusion_file in os.listdir(fusion_folder):
 
             # Ajouter les en-têtes "Attribute Name" et "Attribute Value" dans l'ordre
             for attribute_name_field, attribute_value_field in zip(attribute_name_fields, attribute_value_fields):
-                mip_fusion_headers.append(attribute_name_field)
-                mip_fusion_headers.append(attribute_value_field)
+                if attribute_value_field in reverse_field_mapping:
+                    attribute_name = reverse_field_mapping[attribute_value_field]  # Récupérer le nom du champ mappé
+                    mip_fusion_headers.append(attribute_name)  # Ajouter le nom du champ mappé dans "Attribute Name {i}"
+                    mip_fusion_headers.append(attribute_value_field)
 
             # Ajouter les en-têtes restants après "Attribute Value 1"
             mip_fusion_headers.extend(mip_converted_headers[attribute_value1_index + 1:])
@@ -259,7 +261,10 @@ for fusion_file in os.listdir(fusion_folder):
                         field_name = reverse_field_mapping[header]
                         if field_name in fusion_headers:
                             column_index = fusion_headers.index(field_name)
-                            mip_fusion_row.append(fusion_row[column_index])  # Utiliser l'élément à l'index correspondant
+                            # Écrire le nom du champ mappé dans "Attribute Name {i}"
+                            mip_fusion_row.append(field_name)
+                            # Écrire la valeur correspondante dans "Attribute Value {i}"
+                            mip_fusion_row.append(fusion_row[column_index])
                         else:
                             mip_fusion_row.append('')
                     else:
@@ -269,7 +274,6 @@ for fusion_file in os.listdir(fusion_folder):
 
         print(f"Le fichier de fusion {fusion_file} a été traité avec succès : {mip_fusion_file}")
 print("Les fichiers de sortie ont été écrits avec succès.")
-
 
 # todo 1: créer le nombre de paire Attribute Name {i} et Attribute Value {i} nécessaires (à ce stade j'en ai plusieurs vides inutiles qui sont créées)
 # todo 1 bis: récupérer les headers des champs mappés Attribute Value, et les écrire dans Attribute Name associé 
