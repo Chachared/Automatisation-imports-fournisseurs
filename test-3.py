@@ -214,26 +214,21 @@ for fusion_file in os.listdir(fusion_folder):
             # Créer un dictionnaire de mapping inversé pour les champs du fichier de fusion
             reverse_field_mapping = {v: k for k, v in field_mapping[fusion_file].items()}
 
-            # Vérifier si les champs "Attribute Name 1" et "Attribute Value 1" doivent être créés
-            if "Attribute Name 1" not in mip_converted_headers or "Attribute Value 1" not in mip_converted_headers:
-                # Trouver les index des champs "Attribute Name" et "Attribute Value" existants dans le fichier MIP
-                attribute_name_indices = [i for i, header in enumerate(mip_converted_headers) if header.startswith("Attribute Name")]
-                attribute_value_indices = [i for i, header in enumerate(mip_converted_headers) if header.startswith("Attribute Value")]
-
-                # Trouver le prochain index disponible pour les champs "Attribute Name" et "Attribute Value"
-                next_attribute_name_index = len(attribute_name_indices) + 1
-                next_attribute_value_index = len(attribute_value_indices) + 1
-
-                # Ajouter les champs "Attribute Name 1" et "Attribute Value 1" aux en-têtes du fichier de fusion MIP
-                mip_converted_headers.append(f"Attribute Name {next_attribute_name_index}")
-                mip_converted_headers.append(f"Attribute Value {next_attribute_value_index}")
-
             # Trouver les index des champs "Attribute Name" et "Attribute Value" existants dans le fichier MIP
             attribute_name_indices = [i for i, header in enumerate(mip_converted_headers) if header.startswith("Attribute Name")]
             attribute_value_indices = [i for i, header in enumerate(mip_converted_headers) if header.startswith("Attribute Value")]
 
-            # Écrire les en-têtes dans le fichier de fusion MIP
-            mip_fusion_headers = mip_converted_headers[:max(attribute_value_indices) + 1]
+            # Trouver le prochain index disponible pour les champs "Attribute Name" et "Attribute Value"
+            next_attribute_name_index = len(attribute_name_indices) + 1
+            next_attribute_value_index = len(attribute_value_indices) + 1
+
+            mip_fusion_headers = []
+
+            # Parcourir les en-têtes du fichier MIP converti
+            for header in mip_converted_headers:
+                cleaned_header = header.strip()  # Supprimer les espaces blancs au début et à la fin de l'en-tête
+                if cleaned_header and cleaned_header != ",":
+                    mip_fusion_headers.append(cleaned_header)
 
             # Parcourir les colonnes du fichier MIP converti
             for i in range(1, len(reverse_field_mapping) + 1):
@@ -244,11 +239,13 @@ for fusion_file in os.listdir(fusion_folder):
                     if attribute_name_field not in mip_fusion_headers:
                         mip_fusion_headers.append(attribute_name_field)  # Ajouter le champ "Attribute Name" dans les en-têtes
                         mip_fusion_headers.append(attribute_value_field)  # Ajouter le champ "Attribute Value" dans les en-têtes
-
             # Ajouter les en-têtes restants après le dernier champ "Attribute Value"
-            mip_fusion_headers.extend(mip_converted_headers[max(attribute_value_indices) + 1:])
+            mip_fusion_headers.extend(mip_converted_headers[max(attribute_name_indices) + 1:])
 
-            mip_fusion_writer.writerow(mip_fusion_headers)
+            mip_fusion_writer.writerow(list(mip_fusion_headers))
+
+            # Créer un dictionnaire de mappage inversé pour les champs du fichier de fusion
+            reverse_mapping = {v: k for k, v in field_mapping[fusion_file].items()}
 
             # Parcourir les lignes du fichier de fusion
             for fusion_row in fusion_data:
@@ -260,10 +257,10 @@ for fusion_file in os.listdir(fusion_folder):
                     header = mip_fusion_headers[i]
                     if header.startswith("Attribute Name"):
                         attribute_name_index = int(header.split(" ")[-1]) - 1
-                        if attribute_name_index < len(reverse_field_mapping):
+                        if attribute_name_index < len(reverse_mapping):
                             attribute_value_field = f"Attribute Value {attribute_name_index + 1}"
-                            if attribute_value_field in reverse_field_mapping:
-                                attribute_name = reverse_field_mapping[attribute_value_field]
+                            if attribute_value_field in reverse_mapping:
+                                attribute_name = reverse_mapping[attribute_value_field]
                                 mip_fusion_row.append(attribute_name)
                             else:
                                 mip_fusion_row.append('')
@@ -271,23 +268,34 @@ for fusion_file in os.listdir(fusion_folder):
                             mip_fusion_row.append('')
                     elif header.startswith("Attribute Value"):
                         attribute_value_index = int(header.split(" ")[-1]) - 1
-                        if attribute_value_index < len(fusion_row):
-                            attribute_value = fusion_row[attribute_value_index]
-                            mip_fusion_row.append(attribute_value)
+                        if attribute_value_index < len(reverse_mapping):
+                            attribute_value_field = f"Attribute Value {attribute_value_index + 1}"
+                            if attribute_value_field in reverse_mapping:
+                                attribute_value = fusion_row[fusion_headers.index(reverse_mapping[attribute_value_field])]
+                                mip_fusion_row.append(attribute_value)
+                            else:
+                                mip_fusion_row.append('')
                         else:
                             mip_fusion_row.append('')
-                    else:
-                        mip_fusion_row.append('')
+                    elif not header.startswith("Attribute Value") and not header.startswith("Attribute Name"):
+                        mapped_field = reverse_mapping.get(header)
+                        if mapped_field is not None:
+                            ## mon problème vient d'ici !
+                            if mapped_field in fusion_headers:
+                                field_index = fusion_headers.index(mapped_field)
+                                field_value = fusion_row[field_index]
+                                print(f"mapped_field: {mapped_field}, field_index: {field_index}, field_value: {field_value}")
+                                mip_fusion_row.append(field_value)
+                            else:
+                                mip_fusion_row.append('')
+                        else:
+                            mip_fusion_row.append('')
 
                 mip_fusion_writer.writerow(mip_fusion_row)
 
         print(f"Le fichier de fusion {fusion_file} a été traité avec succès : {mip_fusion_file}")
+
 print("Les fichiers de sortie ont été écrits avec succès.")
 
-# todo 1: créer le nombre de paire Attribute Name {i} et Attribute Value {i} nécessaires (à ce stade j'en ai plusieurs vides inutiles qui sont créées)
-# todo 1 bis: récupérer les headers des champs mappés Attribute Value, et les écrire dans Attribute Name associé 
-#       -> Par exemple dans fusion-valeo.csv, j'ai le champ "Marque" et sa valeur est "Valeo", dans MIP-fon-valeo.csv, je voudrais que dans le champs Attribute Name  j'ai la valeur "Marque" et dans Attribute Value , j'ai la valeur "Valeo"...
-# todo 2: réparer le champ Attribute Value qui matche 'OE' de fusion -> séparer les valeurs par des '|'
-# todo 3: séparer les numéros du champ "Compatible Product 1" ('Ktype' ou autre des fichiers de fusion, mappés), et écirre chaque Ktype dans un format "Ktype={numéro de Ktype}" et dans un nouveau champ Compatible Product{i}
-# todo 5: remplir les champs complexes qui sont construits avec les valeurs de plusieurs champs des fichiers de fusion. Par exemple le champ 'SKU' dans MIP sera écrit avec {MPN}_{Marque} du fuichier de fusion
-# todo 6 : affiner le mapping, vérifier que je remplis bien tous les champs 'fixes'
+
+## vérifier si le probleme de remplissage vient à cause des fichiers input (parfois il y a des "", etc, voir pour trim avant de créer le fusion_file)
