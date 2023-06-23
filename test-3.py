@@ -231,7 +231,7 @@ for fusion_file in os.listdir(fusion_folder):
                     mip_fusion_headers.append(cleaned_header)
 
             # Parcourir les colonnes du fichier MIP converti
-            for i in range(1, len(reverse_field_mapping) + 1):
+            for i in range(1, len(mip_converted_headers) + 1):
                 attribute_name_field = f"Attribute Name {i}"
                 attribute_value_field = f"Attribute Value {i}"
                 if attribute_value_field in reverse_field_mapping:
@@ -239,8 +239,9 @@ for fusion_file in os.listdir(fusion_folder):
                     if attribute_name_field not in mip_fusion_headers:
                         mip_fusion_headers.append(attribute_name_field)  # Ajouter le champ "Attribute Name" dans les en-têtes
                         mip_fusion_headers.append(attribute_value_field)  # Ajouter le champ "Attribute Value" dans les en-têtes
+
             # Ajouter les en-têtes restants après le dernier champ "Attribute Value"
-            mip_fusion_headers.extend(mip_converted_headers[max(attribute_name_indices) + 1:])
+            mip_fusion_headers.extend(header for header in mip_converted_headers if header not in mip_fusion_headers)
 
             mip_fusion_writer.writerow(list(mip_fusion_headers))
 
@@ -297,5 +298,8 @@ for fusion_file in os.listdir(fusion_folder):
 
 print("Les fichiers de sortie ont été écrits avec succès.")
 
-
-## vérifier si le probleme de remplissage vient à cause des fichiers input (parfois il y a des "", etc, voir pour trim avant de créer le fusion_file)
+## todo 1 : aligner toutes les paires Attribute Name/Value à la suite
+## todo 2 : séparer les numéros de Ktype dans le champ compatible product 1. Créer un nouveau Compatible Product {i} pour chaque numéro de Ktype trouvé. L'écrire "Ktype={Ktype}"
+## todo 3 : séparer les numéros du champ Attribute value qui correspond à "OE" par des '|', au lieu des séparateurs actuels. Puis limiter le nombre de numéros à 65, et créer un nouveau champ Attribute Name/Value pour les numéros au dela de 65, et ainsi de suite
+## todo 4 : ajouter le reste du mapping
+## todo 5 : mapper les vrais fichiers (y compris pour fusion tecdoc/input)
