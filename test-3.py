@@ -161,9 +161,10 @@ field_mapping = {
         "Poids": "Attribute Value 7",
         "Fixation de colonne de direction": "Attribute Value 8",
         "Diamètre du disque": "Attribute Value 9",
-        "Info complementaire 1": "Attribute Value 10",
-
+        "Info complementaire 1": "Additional Info",
         "Ktype": "Compatible Product 1",
+        "SKU": "MPN_Brand",
+        "Title" : "MPN_Brand_Type",
         # Ajoutez d'autres mappages de champs ici
     },
     'fusion-test.csv': {
@@ -181,8 +182,10 @@ field_mapping = {
         "Poids": "Attribute Value 7",
         "Fixation de colonne de direction": "Attribute Value 8",
         "Diamètre du disque": "Attribute Value 9",
-        "Info complementaire 1": "Attribute Value 10",
+        "Info complementaire 1": "Additional Info",
         "Ktype": "Compatible Product 1",
+        "SKU": "MPN_Brand",
+        "Title" : "MPN_Brand_Type",
 
         # Ajoutez d'autres mappages de champs ici
     },
@@ -251,11 +254,12 @@ for fusion_file in os.listdir(fusion_folder):
             # Parcourir les lignes du fichier de fusion
             for fusion_row in fusion_data:
                 # Créer une liste pour chaque ligne du fichier de fusion MIP
-                mip_fusion_row = []
+                mip_fusion_row = []           
 
                 # Parcourir les colonnes du fichier MIP converti
                 for i in range(len(mip_fusion_headers)):
                     header = mip_fusion_headers[i]
+                    # Ecrire les champs Attribute Name
                     if header.startswith("Attribute Name"):
                         attribute_name_index = int(header.split(" ")[-1]) - 1
                         if attribute_name_index < len(reverse_mapping):
@@ -267,6 +271,7 @@ for fusion_file in os.listdir(fusion_folder):
                                 mip_fusion_row.append('')
                         else:
                             mip_fusion_row.append('')
+                    # Ecrire les champs Attribute Value
                     elif header.startswith("Attribute Value"):
                         attribute_value_index = int(header.split(" ")[-1]) - 1
                         if attribute_value_index < len(reverse_mapping):
@@ -278,19 +283,56 @@ for fusion_file in os.listdir(fusion_folder):
                                 mip_fusion_row.append('')
                         else:
                             mip_fusion_row.append('')
+                    # Récupérer la valeur du champ SKU à partir du mapping
+                    elif header.startswith('SKU'):
+                        sku_mapping = field_mapping[fusion_file].get("SKU")
+                        if sku_mapping is not None:
+                            sku_parts = sku_mapping.split("_")
+                            sku_values = []
+                            for part in sku_parts:
+                                if part in fusion_headers:
+                                    part_index = fusion_headers.index(part)
+                                    part_value = fusion_row[part_index]
+                                    sku_values.append(part_value)
+                            sku_value = "_".join(sku_values)
+                            mip_fusion_row.append(sku_value)
+                    # Récupérer la valeur du champ Title à partir du mapping
+                    elif header == "Title":
+                        title_mapping = field_mapping[fusion_file].get("Title")
+                        if title_mapping is not None:
+                            title_parts = title_mapping.split("_")
+                            title_values = []
+                            for part in title_parts:
+                                if part in fusion_headers:
+                                    part_index = fusion_headers.index(part)
+                                    part_value = fusion_row[part_index]
+                                    title_values.append(part_value)
+                            title_value = " ".join(title_values)
+                            mip_fusion_row.append(title_value)
+                    # Ecrire les champs à valeurs fixes
+                    elif header == "Localized For":
+                        mip_fusion_row.append('fr_FR')
+                    elif header == "Subtitle":
+                        mip_fusion_row.append('')  # Attribuer une chaîne vide au champ "Subtitle" (option payante)
+                    elif header == "Condition":
+                        mip_fusion_row.append('NEW')
+                    elif header == "Channel ID":
+                        mip_fusion_row.append('EBAY_FR')
+                    elif header == "VAT Percent":
+                        mip_fusion_row.append(20)
+                    # Ecrire tous les autres champs mappés
                     elif not header.startswith("Attribute Value") and not header.startswith("Attribute Name"):
                         mapped_field = reverse_mapping.get(header)
                         if mapped_field is not None:
-                            ## mon problème vient d'ici !
                             if mapped_field in fusion_headers:
                                 field_index = fusion_headers.index(mapped_field)
                                 field_value = fusion_row[field_index]
-                                print(f"mapped_field: {mapped_field}, field_index: {field_index}, field_value: {field_value}")
                                 mip_fusion_row.append(field_value)
                             else:
                                 mip_fusion_row.append('')
                         else:
                             mip_fusion_row.append('')
+                
 
                 mip_fusion_writer.writerow(mip_fusion_row)
 
@@ -298,7 +340,7 @@ for fusion_file in os.listdir(fusion_folder):
 
 print("Les fichiers de sortie ont été écrits avec succès.")
 
-## todo 1 : aligner toutes les paires Attribute Name/Value à la suite
+## todo 1 : vériier les champs écrits en fixe qui ne s'écrivent pas
 ## todo 2 : séparer les numéros de Ktype dans le champ compatible product 1. Créer un nouveau Compatible Product {i} pour chaque numéro de Ktype trouvé. L'écrire "Ktype={Ktype}"
 ## todo 3 : séparer les numéros du champ Attribute value qui correspond à "OE" par des '|', au lieu des séparateurs actuels. Puis limiter le nombre de numéros à 65, et créer un nouveau champ Attribute Name/Value pour les numéros au dela de 65, et ainsi de suite
 ## todo 4 : ajouter le reste du mapping
