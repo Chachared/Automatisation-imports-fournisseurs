@@ -162,7 +162,6 @@ field_mapping = {
         "Fixation de colonne de direction": "Attribute Value 8",
         "Diamètre du disque": "Attribute Value 9",
         "Info complementaire 1": "Additional Info",
-        "Ktype": "Compatible Product 1",
         "SKU": "MPN_Brand",
         "Title" : "MPN_Brand_Type",
         # Ajoutez d'autres mappages de champs ici
@@ -183,7 +182,6 @@ field_mapping = {
         "Fixation de colonne de direction": "Attribute Value 8",
         "Diamètre du disque": "Attribute Value 9",
         "Info complementaire 1": "Additional Info",
-        "Ktype": "Compatible Product 1",
         "SKU": "MPN_Brand",
         "Title" : "MPN_Brand_Type",
 
@@ -192,9 +190,12 @@ field_mapping = {
     # Ajoutez d'autres mappages de champs pour les autres fichiers de fusion
 }
 
-# écrire la data dans les fichiers MIP-{fusion file}.csv
+# récupérer le template "MIP.csv"
 mip_converted_path = os.path.join(mip_converted_folder, mip_converted_file)
 
+separator_regex = re.compile(r'[,\\s;|]')
+
+# Ecrire les fichiers MIP-fusion_file grâce aux fusion_files et au template MIP.csv
 for fusion_file in os.listdir(fusion_folder):
     if fusion_file.startswith('fusion-') and fusion_file.endswith('.csv'):
         mip_fusion_file = f"MIP-{fusion_file}"
@@ -254,7 +255,7 @@ for fusion_file in os.listdir(fusion_folder):
             # Parcourir les lignes du fichier de fusion
             for fusion_row in fusion_data:
                 # Créer une liste pour chaque ligne du fichier de fusion MIP
-                mip_fusion_row = []           
+                mip_fusion_row = []
 
                 # Parcourir les colonnes du fichier MIP converti
                 for i in range(len(mip_fusion_headers)):
@@ -320,19 +321,20 @@ for fusion_file in os.listdir(fusion_folder):
                         mip_fusion_row.append('EBAY_FR')
                     elif header == "VAT Percent":
                         mip_fusion_row.append(20)
+                    elif header  == "Include eBay Product Details":
+                        mip_fusion_row.append("false")
                     # Ecrire tous les autres champs mappés
                     elif not header.startswith("Attribute Value") and not header.startswith("Attribute Name"):
-                        mapped_field = reverse_mapping.get(header)
-                        if mapped_field is not None:
-                            if mapped_field in fusion_headers:
-                                field_index = fusion_headers.index(mapped_field)
-                                field_value = fusion_row[field_index]
-                                mip_fusion_row.append(field_value)
+                        if header in reverse_mapping:
+                            value_field = reverse_mapping[header]
+                            if value_field in fusion_headers:
+                                value_index = fusion_headers.index(value_field)
+                                value = fusion_row[value_index]
+                                mip_fusion_row.append(value)
                             else:
                                 mip_fusion_row.append('')
                         else:
                             mip_fusion_row.append('')
-                
 
                 mip_fusion_writer.writerow(mip_fusion_row)
 
@@ -340,7 +342,6 @@ for fusion_file in os.listdir(fusion_folder):
 
 print("Les fichiers de sortie ont été écrits avec succès.")
 
-## todo 1 : vériier les champs écrits en fixe qui ne s'écrivent pas
 ## todo 2 : séparer les numéros de Ktype dans le champ compatible product 1. Créer un nouveau Compatible Product {i} pour chaque numéro de Ktype trouvé. L'écrire "Ktype={Ktype}"
 ## todo 3 : séparer les numéros du champ Attribute value qui correspond à "OE" par des '|', au lieu des séparateurs actuels. Puis limiter le nombre de numéros à 65, et créer un nouveau champ Attribute Name/Value pour les numéros au dela de 65, et ainsi de suite
 ## todo 4 : ajouter le reste du mapping
